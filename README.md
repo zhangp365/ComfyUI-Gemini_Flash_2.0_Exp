@@ -2,6 +2,8 @@
 
 A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental model, enabling multimodal analysis of text, images, video frames, and audio directly within ComfyUI workflows.
 
+![image](https://github.com/user-attachments/assets/cbcfbf33-52df-4474-b322-b89210414117)
+
 ## Features
 
 - Multimodal input support:
