@@ -22,7 +22,7 @@ A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental mod
 1. Clone this repository into your ComfyUI custom_nodes folder:
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/yourusername/ComfyUI-Gemini_Flash_2.0_Exp
+git clone https://github.com/ShmuelRonen/ComfyUI-Gemini_Flash_2.0_Exp.git
 ```
 
 2. Install required dependencies:
