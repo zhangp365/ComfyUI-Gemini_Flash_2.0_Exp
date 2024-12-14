@@ -1,0 +1,374 @@
+{
+  "last_node_id": 106,
+  "last_link_id": 233,
+  "nodes": [
+    {
+      "id": 103,
+      "type": "Gemini_Flash_200_Exp",
+      "pos": [
+        548.3085327148438,
+        913.0216674804688
+      ],
+      "size": [
+        392.99896240234375,
+        351.6019592285156
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 232,
+          "shape": 7
+        },
+        {
+          "name": "video",
+          "type": "IMAGE",
+          "link": 233,
+          "shape": 7
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 230,
+          "shape": 7
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": 224,
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "generated_content",
+          "type": "STRING",
+          "links": [
+            229
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Gemini_Flash_200_Exp"
+      },
+      "widgets_values": [
+        "Analyze the situation in details.",
+        "image",
+        false,
+        false,
+        "",
+        "",
+        "",
+        2048,
+        0.4,
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 105,
+      "type": "LoadAudio",
+      "pos": [
+        86.53653717041016,
+        881.2338256835938
+      ],
+      "size": [
+        315,
+        124
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            230
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadAudio"
+      },
+      "widgets_values": [
+        "1 (1).wav",
+        null,
+        ""
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 87,
+      "type": "LoadImage",
+      "pos": [
+        79.92166900634766,
+        489.6202087402344
+      ],
+      "size": [
+        315,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            232
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "0000.png",
+        "image"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 106,
+      "type": "VHS_LoadVideo",
+      "pos": [
+        91.0526351928711,
+        1088.1719970703125
+      ],
+      "size": [
+        307.37884521484375,
+        562.5903930664062
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "meta_batch",
+          "type": "VHS_BatchManager",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            233
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        },
+        {
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_LoadVideo"
+      },
+      "widgets_values": {
+        "video": "results_grid_prob123.mp4",
+        "force_rate": 0,
+        "force_size": "Disabled",
+        "custom_width": 512,
+        "custom_height": 512,
+        "frame_load_cap": 0,
+        "skip_first_frames": 0,
+        "select_every_nth": 1,
+        "choose video to upload": "image",
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "force_rate": 0,
+            "frame_load_cap": 0,
+            "skip_first_frames": 0,
+            "select_every_nth": 1,
+            "filename": "results_grid_prob123.mp4",
+            "type": "input",
+            "format": "video/mp4"
+          },
+          "muted": false
+        }
+      },
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 102,
+      "type": "String Literal",
+      "pos": [
+        -450.3441467285156,
+        968.1896362304688
+      ],
+      "size": [
+        462.447021484375,
+        278.05865478515625
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            224
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "String Literal"
+      },
+      "widgets_values": [
+        "What you see here"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 104,
+      "type": "ShowText|pysssss",
+      "pos": [
+        984.9638061523438,
+        910.2611083984375
+      ],
+      "size": [
+        703.7472534179688,
+        594.7271728515625
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 229,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null,
+          "shape": 6
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "",
+        "Certainly!\n\nThe image presents a surreal and intriguing scene featuring two figures standing side-by-side, almost mirroring each other. \n\nHere are the key elements:\n\n**Figures:**\n\n*   **Two Faces:** The figures are depicted in profile, facing opposite directions. Their faces are strikingly similar, but with distinct differences in their \"construction.\"\n*   **Architectural Faces:** Their faces are not solid but rather seem to be made up of intricate architectural structures, like buildings with windows and walls. The left figure has a more grid-like, linear structure, while the right figure has more organic, flowing patterns.\n*   **Fragmented Appearance:** The faces appear to be broken or fragmented, with gaps and missing pieces, further enhancing the surreal quality.\n*   **Draped Cloth:** Both figures are draped in cloth, with the left figure wearing a light-colored shawl and the right figure wearing a darker, patterned one.\n\n**Background:**\n\n*   **Desert Landscape:** The figures are set against a desert-like backdrop with dry, cracked earth and distant, crumbling structures.\n*   **Ruined Buildings:** The buildings in the background echo the architectural theme of the figures' faces, suggesting a connection between the figures and their environment.\n*   **Muted Colors:** The overall color palette is muted and earthy, with shades of beige, brown, and a hint of green in the sky.\n\n**Overall Impression:**\n\n*   **Surreal and Symbolic:** The image has a surreal and dreamlike quality, with the fragmented faces and architectural elements creating a sense of mystery and symbolism.\n*   **Duality and Contrast:** The two figures, with their mirrored yet distinct appearances, suggest themes of duality, contrast, and perhaps inner conflict.\n*   **Artistic and Thought-Provoking:** The image is visually striking and thought-provoking, inviting viewers to contemplate its meaning and symbolism.\n\nIf you'd like, you can ask me about specific aspects of the image!"
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    }
+  ],
+  "links": [
+    [
+      224,
+      102,
+      0,
+      103,
+      3,
+      "STRING"
+    ],
+    [
+      229,
+      103,
+      0,
+      104,
+      0,
+      "STRING"
+    ],
+    [
+      230,
+      105,
+      0,
+      103,
+      2,
+      "AUDIO"
+    ],
+    [
+      232,
+      87,
+      0,
+      103,
+      0,
+      "IMAGE"
+    ],
+    [
+      233,
+      106,
+      0,
+      103,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6588450000000005,
+      "offset": [
+        797.594073270823,
+        -379.88073559887516
+      ]
+    },
+    "info": {
+      "name": "workflow",
+      "author": "",
+      "description": "",
+      "version": "1",
+      "created": "2024-08-01T19:08:07.203Z",
+      "modified": "2024-08-02T03:55:48.387Z",
+      "software": "ComfyUI"
+    }
+  },
+  "version": 0.4
+}
