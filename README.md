@@ -21,27 +21,31 @@ A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental mod
 
 ## Installation
 
-1. Clone this repository into your ComfyUI custom_nodes folder:
+Install via ComfyUI manager
+
+or
+
+Clone this repository into your ComfyUI custom_nodes folder:
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/ShmuelRonen/ComfyUI-Gemini_Flash_2.0_Exp.git
 ```
 
-2. Install required dependencies:
+Install required dependencies:
 ```bash
 pip install google.generativeai
 pip install pillow
 pip install torchaudio
 ```
 
-3. Get your free API key from Google AI Studio:
+1. Get your free API key from Google AI Studio:
    - Visit [Google AI Studio](https://aistudio.google.com/prompts/new_chat)
    - Log in with your Google account
    - Click on "Get API key" or go to settings
    - Create a new API key
    - Copy the API key for use in config.json
 
-4. Set up your API key in the `config.json` file (will be created automatically on first run)
+2. Set up your API key in the `config.json` file (will be created automatically on first run)
 
 ## Configuration
 
