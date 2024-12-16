@@ -1,0 +1,236 @@
+{
+  "last_node_id": 108,
+  "last_link_id": 234,
+  "nodes": [
+    {
+      "id": 104,
+      "type": "ShowText|pysssss",
+      "pos": [
+        983.6605834960938,
+        912.2161254882812
+      ],
+      "size": [
+        703.7472534179688,
+        594.7271728515625
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 229,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null,
+          "shape": 6
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "",
+        "Being in love is a complex emotional state characterized by deep affection, strong attachment, and often, a sense of euphoria and intense desire for another person. It involves a mix of physical attraction, emotional intimacy, and a strong desire for connection and commitment. It's a powerful feeling that can impact thoughts, behaviors, and priorities."
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 102,
+      "type": "String Literal",
+      "pos": [
+        -24.830081939697266,
+        1175.408203125
+      ],
+      "size": [
+        462.447021484375,
+        278.05865478515625
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            224
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "String Literal"
+      },
+      "widgets_values": [
+        "Answer the voice question with a reasoned answer please."
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 103,
+      "type": "Gemini_Flash_200_Exp",
+      "pos": [
+        548.3085327148438,
+        913.0216674804688
+      ],
+      "size": [
+        392.99896240234375,
+        351.6019592285156
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "video",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 234,
+          "shape": 7
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": 224,
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "generated_content",
+          "type": "STRING",
+          "links": [
+            229
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Gemini_Flash_200_Exp"
+      },
+      "widgets_values": [
+        "Analyze the situation in details.",
+        "audio",
+        false,
+        false,
+        "",
+        "",
+        "",
+        2048,
+        0.4,
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 107,
+      "type": "AudioRecorder",
+      "pos": [
+        190.11346435546875,
+        951.5189819335938
+      ],
+      "size": [
+        250,
+        160
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            234
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AudioRecorder"
+      },
+      "widgets_values": [
+        "Microsoft Sound Mapper - Input",
+        9,
+        44100,
+        24
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    }
+  ],
+  "links": [
+    [
+      224,
+      102,
+      0,
+      103,
+      3,
+      "STRING"
+    ],
+    [
+      229,
+      103,
+      0,
+      104,
+      0,
+      "STRING"
+    ],
+    [
+      234,
+      107,
+      0,
+      103,
+      2,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7247295000000004,
+      "offset": [
+        604.9400858128503,
+        -574.1405924395698
+      ]
+    },
+    "info": {
+      "name": "workflow",
+      "author": "",
+      "description": "",
+      "version": "1",
+      "created": "2024-08-01T19:08:07.203Z",
+      "modified": "2024-08-02T03:55:48.387Z",
+      "software": "ComfyUI"
+    }
+  },
+  "version": 0.4
+}
