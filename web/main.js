@@ -4,18 +4,18 @@ app.registerExtension({
     name: "ComfyUI.AudioRecorder",
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name === "AudioRecorder") {
-            // Hide trigger widget
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
                 this.setSize([250, 160]);
                 this.isRecording = false;
+                this.recordingTimeout = null;
                 
-                // Hide the trigger widget
                 const triggerWidget = this.widgets.find(w => w.name === "trigger");
                 if (triggerWidget) {
                     triggerWidget.type = "hidden";
                     triggerWidget.hidden = true;
+                    triggerWidget.value = 0;
                 }
                 
                 return r;
@@ -60,22 +60,23 @@ app.registerExtension({
                     if (!this.isRecording) {
                         this.isRecording = true;
                         
-                        // Update trigger value
+                        // Clear any existing timeout
+                        if (this.recordingTimeout) {
+                            clearTimeout(this.recordingTimeout);
+                        }
+                        
+                        // Set new timeout for 10 seconds
+                        this.recordingTimeout = setTimeout(() => {
+                            this.isRecording = false;
+                            app.graph.setDirtyCanvas(true);
+                        }, 10000);  // 10 seconds
+                        
                         const triggerWidget = this.widgets.find(w => w.name === "trigger");
                         if (triggerWidget) {
                             triggerWidget.value = (triggerWidget.value || 0) + 1;
                         }
                         
-                        // Force node to be dirty and queue prompt
-                        this.setOutputData(0, undefined);
-                        app.graph.setDirtyCanvas(true);
                         app.queuePrompt();
-
-                        const duration = this.widgets.find(w => w.name === "duration").value;
-                        setTimeout(() => {
-                            this.isRecording = false;
-                            app.graph.setDirtyCanvas(true);
-                        }, (duration * 1000) + 500);
                     }
                     return true;
                 }
