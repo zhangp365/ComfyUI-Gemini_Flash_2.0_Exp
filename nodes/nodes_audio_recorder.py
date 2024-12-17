@@ -14,13 +14,6 @@ class AudioRecorder:
         return {
             "required": {
                 "device": (input_devices, {"default": input_devices[0] if input_devices else "Default"}),
-                "duration": ("INT", {
-                    "default": 10,
-                    "min": 1,
-                    "max": 120,
-                    "step": 1,
-                    "display": "slider"
-                }),
                 "sample_rate": ("INT", {
                     "default": 44100,
                     "min": 8000,
@@ -28,7 +21,19 @@ class AudioRecorder:
                     "step": 100,
                     "display": "number"
                 }),
-                "trigger": ("INT", {"default": 0})  # Move back to required but keep it hidden in JS
+                "silence_threshold": ("FLOAT", {
+                    "default": 0.01,
+                    "min": 0.001,
+                    "max": 0.1,
+                    "step": 0.001
+                }),
+                "silence_duration": ("FLOAT", {
+                    "default": 2.0,
+                    "min": 0.5,
+                    "max": 5.0,
+                    "step": 0.1
+                }),
+                "trigger": ("INT", {"default": 0})
             }
         }
 
@@ -37,7 +42,6 @@ class AudioRecorder:
 
     def reset_state(self):
         """Clean up all old recordings"""
-        # Clean up temp directory from our recordings
         if hasattr(self, 'temp_dir'):
             for filename in os.listdir(self.temp_dir):
                 if filename.startswith("recorded_audio_") and filename.endswith(".wav"):
@@ -56,12 +60,15 @@ class AudioRecorder:
     FUNCTION = "record"
     CATEGORY = "audio"
 
-    def record(self, device, duration, sample_rate, trigger):
+    def record(self, device, sample_rate, silence_threshold, silence_duration, trigger):
         try:
             if trigger != self.last_trigger:
                 self.last_trigger = trigger
                 print(f"\nStarting new recording...")
-                print(f"Settings: device={device}, duration={duration}s, rate={sample_rate}")
+                print(f"Settings: silence_threshold={silence_threshold}, silence_duration={silence_duration}s, rate={sample_rate}")
+                
+                audio_chunks = []
+                silence_start = None
                 
                 try:
                     print("Opening audio stream...")
@@ -69,21 +76,46 @@ class AudioRecorder:
                         device=None,
                         channels=1,
                         samplerate=sample_rate,
+                        blocksize=int(sample_rate * 0.1)  # 100ms chunks
                     ) as stream:
                         print("Recording in progress...")
-                        frames = int(duration * sample_rate)
-                        audio_data = stream.read(frames)[0]
-                        self.audio_data = audio_data
+                        while True:
+                            audio_chunk = stream.read(int(sample_rate * 0.1))[0]
+                            audio_chunks.append(audio_chunk)
+                            
+                            # Check for silence
+                            if np.max(np.abs(audio_chunk)) < silence_threshold:
+                                if silence_start is None:
+                                    silence_start = time.time()
+                                elif time.time() - silence_start >= silence_duration:
+                                    print(f"Detected {silence_duration} seconds of silence, stopping...")
+                                    break
+                            else:
+                                silence_start = None
                     
                     print("Processing recording...")
-                    audio_tensor = torch.from_numpy(self.audio_data).float().t()
+                    audio_data = np.concatenate(audio_chunks, axis=0)
+                    
+                    # Trim trailing silence
+                    for i in range(len(audio_data) - 1, -1, -1):
+                        if abs(audio_data[i]) > silence_threshold:
+                            audio_data = audio_data[:i + int(sample_rate * 0.2)]  # Keep 0.2s after last sound
+                            break
+                    
+                    audio_tensor = torch.from_numpy(audio_data).float().t()
                     temp_file = os.path.join(self.temp_dir, f"recorded_audio_{int(time.time())}.wav")
                     torchaudio.save(temp_file, audio_tensor, sample_rate)
                     self.recorded_file = temp_file
                     print(f"Recording saved to: {temp_file}")
+                    print("Sending completed recording signal...")
                     
                     waveform, sr = torchaudio.load(self.recorded_file)
-                    return ({"waveform": waveform.unsqueeze(0), "sample_rate": sr},)
+                    return ({
+                        "waveform": waveform.unsqueeze(0), 
+                        "sample_rate": sr,
+                        "recording_complete": True,
+                        "status": "complete"
+                    },)
                     
                 except Exception as e:
                     print(f"Error recording audio: {e}")
@@ -92,14 +124,24 @@ class AudioRecorder:
             
             elif self.recorded_file and os.path.exists(self.recorded_file):
                 waveform, sr = torchaudio.load(self.recorded_file)
-                return ({"waveform": waveform.unsqueeze(0), "sample_rate": sr},)
+                return ({
+                    "waveform": waveform.unsqueeze(0), 
+                    "sample_rate": sr,
+                    "recording_complete": False,
+                    "status": "cached"
+                },)
             
         except Exception as e:
             print(f"Error in record method: {e}")
             import traceback
             traceback.print_exc()
         
-        return ({"waveform": torch.zeros(1, 1, 1), "sample_rate": sample_rate},)
+        return ({
+            "waveform": torch.zeros(1, 1, 1), 
+            "sample_rate": sample_rate,
+            "recording_complete": False,
+            "status": "empty"
+        },)
 
 NODE_CLASS_MAPPINGS = {
     "AudioRecorder": AudioRecorder
