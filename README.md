@@ -13,7 +13,7 @@ A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental mod
   - Video frame analysis
   - Audio analysis
 - Chat mode with conversation history
-- Voice chat with Audio recorder node (new)
+- Voice chat with smart Audio recorder node (new)
 - Structured output option
 - Temperature and token limit controls
 - Proxy support
@@ -152,18 +152,18 @@ Default rate limits (from config.json):
 - 4 million tokens per minute (TPM_LIMIT)
 - 1,500 requests per day (RPD_LIMIT)
 
-### Audio Analysis with Live Recording:
+### Audio Analysis with Smart Recording:
 
 The package includes two nodes for audio handling:
-1. **Audio Recorder Node**: Live audio recording capability
+1. **Audio Recorder Node**: Smart audio recording with silence detection
 2. **Gemini Flash Node**: Audio content analysis
 
 #### Audio Recorder Node Features:
-- Live microphone recording
-- Adjustable recording duration
-- Configurable sample rate
+- Live microphone recording with automatic silence detection
+- Smart recording termination after detecting silence
+- Configurable silence threshold and duration
 - Compatible with most input devices
-- Visual recording status indicator
+- Visual recording status indicator (10-second auto-reset)
 - Seamless integration with Gemini Flash analysis
 
 #### Audio Recording Setup:
@@ -173,25 +173,34 @@ Audio Recorder Node -> Gemini Flash Node [input_type: "audio"]
 
 #### Audio Recorder Controls:
 - **device**: Select input device (microphone)
-- **duration**: Set recording length (1-120 seconds)
 - **sample_rate**: Audio quality setting (default: 44100 Hz)
-- **Record Button**: Start/Stop recording with visual feedback
+- **silence_threshold**: Sensitivity for silence detection (0.001-0.1)
+- **silence_duration**: Required silence duration to stop recording (0.5-5.0 seconds)
+- **Record Button**: 
+  - Click to start recording
+  - Records until silence is detected
+  - Button resets after 10 seconds automatically
+  - Visual feedback during recording (red indicator)
 
 #### Using Voice Commands/Audio Analysis:
 1. Add Audio Recorder node to your workflow
 2. Connect it to Gemini Flash node
 3. Configure recording settings:
    - Choose input device
-   - Set desired duration
-   - Adjust sample rate if needed
-4. Click "Start Recording" to record
-5. Wait for recording to complete (button turns red during recording)
-6. The recorded audio will automatically be sent to Gemini for analysis
+   - Adjust silence detection parameters
+   - Set sample rate if needed
+4. Click "Start Recording" to begin
+5. Speak your message
+6. Recording automatically stops after detecting silence
+7. The recorded audio is processed and sent to Gemini for analysis
+8. Recording button resets after 10 seconds, ready for next recording
 
 #### Example Audio Analysis Workflow:
 ```
-Audio Recorder Node -> Gemini Flash Node [input_type: "audio", prompt: "Transcribe and analyze this audio"]
+Audio Recorder Node [silence_duration: 2.0, silence_threshold: 0.01] -> 
+Gemini Flash Node [input_type: "audio", prompt: "Transcribe and analyze this audio"]
 ```
+
 
 ## Contributing
 
