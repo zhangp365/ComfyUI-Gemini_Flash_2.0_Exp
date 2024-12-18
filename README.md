@@ -159,6 +159,7 @@ The package includes two nodes for audio handling:
 2. **Gemini Flash Node**: Audio content analysis
 
 #### Audio Recorder Node Features:
+
 - Live microphone recording with automatic silence detection
 - Smart recording termination after detecting silence
 - Configurable silence threshold and duration
@@ -167,11 +168,13 @@ The package includes two nodes for audio handling:
 - Seamless integration with Gemini Flash analysis
 
 #### Audio Recording Setup:
+
 ```
 Audio Recorder Node -> Gemini Flash Node [input_type: "audio"]
 ```
 
 #### Audio Recorder Controls:
+
 - **device**: Select input device (microphone)
 - **sample_rate**: Audio quality setting (default: 44100 Hz)
 - **silence_threshold**: Sensitivity for silence detection (0.001-0.1)
@@ -183,6 +186,7 @@ Audio Recorder Node -> Gemini Flash Node [input_type: "audio"]
   - Visual feedback during recording (red indicator)
 
 #### Using Voice Commands/Audio Analysis:
+
 1. Add Audio Recorder node to your workflow
 2. Connect it to Gemini Flash node
 3. Configure recording settings:
@@ -196,6 +200,7 @@ Audio Recorder Node -> Gemini Flash Node [input_type: "audio"]
 8. Recording button resets after 10 seconds, ready for next recording
 
 #### Example Audio Analysis Workflow:
+
 ```
 Audio Recorder Node [silence_duration: 2.0, silence_threshold: 0.01] -> 
 Gemini Flash Node [input_type: "audio", prompt: "Transcribe and analyze this audio"]
