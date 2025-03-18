@@ -4,7 +4,7 @@ A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental mod
 
 ![image](https://github.com/user-attachments/assets/ad7cdf57-3d42-4d61-bb23-45b1ce228bca)
 ![image](https://github.com/user-attachments/assets/57db07a4-01b4-4578-ae18-7969ebd8d673)
-old code
+Audio option
 ![image](https://github.com/user-attachments/assets/b7db8643-0443-45b9-b79d-c3b8d4e88ce1)
 
 ## Features
