@@ -1,8 +1,10 @@
 # ComfyUI-Gemini_Flash_2.0_Exp
 
-A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental model, enabling multimodal analysis of text, images, video frames, and audio directly within ComfyUI workflows.
+A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental model, enabling multimodal analysis of text, images, video frames, and audio directly within ComfyUI workflows. Now with image generation capabilities!
 
-![image](https://github.com/user-attachments/assets/cbcfbf33-52df-4474-b322-b89210414117)
+![image](https://github.com/user-attachments/assets/ad7cdf57-3d42-4d61-bb23-45b1ce228bca)
+![image](https://github.com/user-attachments/assets/57db07a4-01b4-4578-ae18-7969ebd8d673)
+old code
 ![image](https://github.com/user-attachments/assets/b7db8643-0443-45b9-b79d-c3b8d4e88ce1)
 
 ## Features
@@ -12,8 +14,9 @@ A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental mod
   - Image analysis
   - Video frame analysis
   - Audio analysis
+- **NEW! Image Generation** using gemini-2.0-flash-exp-image-generation model
 - Chat mode with conversation history
-- Voice chat with smart Audio recorder node (new)
+- Voice chat with smart Audio recorder node
 - Structured output option
 - Temperature and token limit controls
 - Proxy support
@@ -33,7 +36,14 @@ git clone https://github.com/ShmuelRonen/ComfyUI-Gemini_Flash_2.0_Exp.git
 
 Install required dependencies:
 ```bash
-pip install google.generativeai
+# Install BOTH packages (both are required)
+pip install google-genai
+pip install google-generativeai
+# OR
+python -m pip install google-genai
+python -m pip install google-generativeai
+
+# Other dependencies
 pip install pillow
 pip install torchaudio
 ```
@@ -75,38 +85,53 @@ If you need to use a proxy:
 ### Required Inputs:
 - **prompt**: Main text prompt for analysis or generation
 - **input_type**: Select from ["text", "image", "video", "audio"]
+- **model_version**: Select model including the new image generation model
+- **operation_mode**: Select between "analysis" or "generate_images" mode
 - **chat_mode**: Boolean to enable/disable chat functionality
 - **clear_history**: Boolean to reset chat history
 
 ### Optional Inputs:
 - **text_input**: Additional text input for context
-- **image**: Image input (IMAGE type)
+- **images**: Multiple image inputs (IMAGE type with list=True)
 - **video**: Video frame sequence input (IMAGE type)
 - **audio**: Audio input (AUDIO type)
 - **max_output_tokens**: Set maximum output length (1-8192)
 - **temperature**: Control response randomness (0.0-1.0)
 - **structured_output**: Enable structured response format
+- **max_images**: Maximum number of images to process (1-16)
+- **batch_count**: Number of images to generate (for image generation mode)
+- **seed**: Random seed for reproducible image generation
 
 ## Usage Examples
 
 ### Basic Text Analysis:
 ```
-Text Input Node -> Gemini Flash Node [input_type: "text"]
+Text Input Node -> Gemini Flash Node [input_type: "text", operation_mode: "analysis"]
 ```
 
 ### Image Analysis:
 ```
-Load Image Node -> Gemini Flash Node [input_type: "image"]
+Load Image Node -> Gemini Flash Node [input_type: "image", operation_mode: "analysis"]
 ```
 
 ### Video Analysis:
 ```
-Load Video Node -> Gemini Flash Node [input_type: "video"]
+Load Video Node -> Gemini Flash Node [input_type: "video", operation_mode: "analysis"]
 ```
 
 ### Audio Analysis:
 ```
-Load Audio Node -> Gemini Flash Node [input_type: "audio"]
+Load Audio Node -> Gemini Flash Node [input_type: "audio", operation_mode: "analysis"]
+```
+
+### Image Generation:
+```
+Text Input Node -> Gemini Flash Node [model_version: "gemini-2.0-flash-exp-image-generation", operation_mode: "generate_images"]
+```
+
+### Image Generation with Reference:
+```
+Load Image Node -> Gemini Flash Node [model_version: "gemini-2.0-flash-exp-image-generation", operation_mode: "generate_images"]
 ```
 
 ## Chat Mode
@@ -136,6 +161,21 @@ When processing videos:
 - Automatically samples frames evenly throughout the video
 - Resizes frames for efficient processing
 - Works with both chat and non-chat modes
+
+## Image Generation
+
+The new image generation capabilities allow you to:
+- Generate images from text descriptions
+- Generate variations based on reference images
+- Control the generation with seed and temperature parameters
+- Generate multiple images with batch_count
+
+### Image Generation Tips:
+- For best results, use the "gemini-2.0-flash-exp-image-generation" model
+- Use "generate_images" operation mode
+- Provide clear, detailed prompts for better results
+- Connect reference images for style guidance
+- Use seed parameter for reproducible results
 
 ## Error Handling
 
