@@ -9,7 +9,6 @@ from PIL import Image
 import torch
 import torchaudio
 import numpy as np
-from contextlib import contextmanager
 
 p = os.path.dirname(os.path.realpath(__file__))
 
@@ -26,21 +25,6 @@ def save_config(config):
     config_path = os.path.join(p, 'config.json')
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=4)
-
-@contextmanager
-def temporary_env_var(key: str, new_value):
-    old_value = os.environ.get(key)
-    if new_value is not None:
-        os.environ[key] = new_value
-    elif key in os.environ:
-        del os.environ[key]
-    try:
-        yield
-    finally:
-        if old_value is not None:
-            os.environ[key] = old_value
-        elif key in os.environ:
-            del os.environ[key]
 
 class ChatHistory:
     def __init__(self):
@@ -72,10 +56,9 @@ class ChatHistory:
         self.messages = []
 
 class Gemini_Flash_200_Exp:
-    def __init__(self, api_key=None, proxy=None):
+    def __init__(self, api_key=None):
         config = get_config()
         self.api_key = api_key or config.get("GEMINI_API_KEY")
-        self.proxy = proxy or config.get("PROXY")
         self.chat_history = ChatHistory()
         if self.api_key is not None:
             self.configure_genai()
@@ -100,7 +83,6 @@ class Gemini_Flash_200_Exp:
                 "video": ("IMAGE", ),
                 "audio": ("AUDIO", ),
                 "api_key": ("STRING", {"default": ""}),
-                "proxy": ("STRING", {"default": ""}),
                 "max_output_tokens": ("INT", {"default": 8192, "min": 1, "max": 8192}),
                 "temperature": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 1.0, "step": 0.1}),
                 "structured_output": ("BOOLEAN", {"default": False}),
@@ -192,7 +174,13 @@ class Gemini_Flash_200_Exp:
                         
             # If we have any images, create the parts structure
             if all_images:
-                parts = [{"text": prompt}]
+                # Modify prompt to handle multiple images
+                if len(all_images) > 1:
+                    modified_prompt = f"Analyze these {len(all_images)} images. {prompt} Please describe each image separately."
+                else:
+                    modified_prompt = prompt
+                    
+                parts = [{"text": modified_prompt}]
                 
                 for idx, img in enumerate(all_images):
                     # Convert image to bytes
@@ -428,7 +416,7 @@ class Gemini_Flash_200_Exp:
     def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash-exp", 
                         operation_mode="analysis", chat_mode=False, clear_history=False,
                         text_input=None, images=None, video=None, audio=None, 
-                        api_key="", proxy="", max_images=6, batch_count=1, seed=0,
+                        api_key="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False):
         """Generate content using Gemini model with various input types."""
         
@@ -444,13 +432,8 @@ class Gemini_Flash_200_Exp:
         # Only update API key if explicitly provided in the node
         if api_key.strip():
             self.api_key = api_key
-            save_config({"GEMINI_API_KEY": self.api_key, "PROXY": self.proxy})
+            save_config({"GEMINI_API_KEY": self.api_key})
             self.configure_genai()
-        
-        # Only update proxy if explicitly provided in the node    
-        if proxy.strip():
-            self.proxy = proxy
-            save_config({"GEMINI_API_KEY": self.api_key, "PROXY": self.proxy})
 
         if not self.api_key:
             raise ValueError("API key not found in config.json or node input")
@@ -460,16 +443,15 @@ class Gemini_Flash_200_Exp:
 
         # Handle image generation mode
         if operation_mode == "generate_images":
-            with temporary_env_var('HTTP_PROXY', self.proxy), temporary_env_var('HTTPS_PROXY', self.proxy):
-                return self.generate_images(
-                    prompt=prompt,
-                    model_version=model_version,
-                    images=images,
-                    batch_count=batch_count,
-                    temperature=temperature,
-                    seed=seed,
-                    max_images=max_images
-                )
+            return self.generate_images(
+                prompt=prompt,
+                model_version=model_version,
+                images=images,
+                batch_count=batch_count,
+                temperature=temperature,
+                seed=seed,
+                max_images=max_images
+            )
 
         # For analysis mode (original functionality)
         model_name = f'models/{model_version}'
@@ -483,108 +465,109 @@ class Gemini_Flash_200_Exp:
             temperature=temperature
         )
 
-        with temporary_env_var('HTTP_PROXY', self.proxy), temporary_env_var('HTTPS_PROXY', self.proxy):
-            try:
-                if chat_mode:
-                    # Special handling for chat mode
-                    if input_type == "text":
-                        text_content = prompt if not text_input else f"{prompt}\n{text_input}"
-                        content = text_content
-                    elif input_type == "image":
-                        # Handle multiple images
-                        all_images = []
-                        
-                        if images is not None:
-                            if isinstance(images, torch.Tensor) and len(images.shape) == 4:
-                                # Batch of images
-                                num_to_process = min(images.shape[0], max_images)
-                                for i in range(num_to_process):
-                                    pil_image = self.tensor_to_image(images[i])
-                                    pil_image = self.resize_image(pil_image, 1024)
-                                    all_images.append(pil_image)
-                            elif isinstance(images, list):
-                                # List of tensors
-                                for img_tensor in images[:max_images]:
-                                    pil_image = self.tensor_to_image(img_tensor)
-                                    pil_image = self.resize_image(pil_image, 1024)
-                                    all_images.append(pil_image)
-                        
-                        if all_images:
-                            # Create content with all images
-                            img_count = len(all_images)
-                            prefix = f"Analyzing {img_count} image{'s' if img_count > 1 else ''}. "
-                            content = [f"{prefix}{prompt}"] + all_images
-                        else:
-                            raise ValueError("No images provided for image input type")
-                    elif input_type == "video" and video is not None:
-                        if len(video.shape) == 4 and video.shape[0] > 1:
-                            frame_count = video.shape[0]
-                            frames = self.sample_video_frames(video)
-                            if frames:
-                                content = [f"This is a video with {frame_count} frames. {prompt}"] + frames
-                            else:
-                                raise ValueError("Error processing video frames")
-                        else:
-                            pil_image = self.tensor_to_image(video.squeeze(0) if len(video.shape) == 4 else video)
-                            pil_image = self.resize_image(pil_image, 1024)
-                            content = [f"This is a single frame from a video. {prompt}", pil_image]
-                    elif input_type == "audio" and audio is not None:
-                        waveform = audio["waveform"]
-                        sample_rate = audio["sample_rate"]
-                        
-                        if waveform.dim() == 3:
-                            waveform = waveform.squeeze(0)
-                        elif waveform.dim() == 1:
-                            waveform = waveform.unsqueeze(0)
-                        
-                        if waveform.shape[0] > 1:
-                            waveform = torch.mean(waveform, dim=0, keepdim=True)
-                        
-                        if sample_rate != 16000:
-                            waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
-                        
-                        buffer = BytesIO()
-                        torchaudio.save(buffer, waveform, 16000, format="WAV")
-                        audio_bytes = buffer.getvalue()
-                        
-                        content = [prompt, {"mime_type": "audio/wav", "data": audio_bytes}]
-                    else:
-                        raise ValueError(f"Invalid or missing input for {input_type}")
-
-                    # Initialize chat and send message
-                    chat = model.start_chat(history=self.chat_history.get_messages_for_api())
-                    response = chat.send_message(content, generation_config=generation_config)
+        try:
+            if chat_mode:
+                # Special handling for chat mode
+                if input_type == "text":
+                    text_content = prompt if not text_input else f"{prompt}\n{text_input}"
+                    content = text_content
+                elif input_type == "image":
+                    # Handle multiple images
+                    all_images = []
                     
-                    # Add to history and get formatted output
-                    if isinstance(content, list):
-                        history_content = prompt
-                    else:
-                        history_content = content
-                        
-                    self.chat_history.add_message("user", history_content)
-                    self.chat_history.add_message("assistant", response.text)
+                    if images is not None:
+                        if isinstance(images, torch.Tensor) and len(images.shape) == 4:
+                            # Batch of images
+                            num_to_process = min(images.shape[0], max_images)
+                            for i in range(num_to_process):
+                                pil_image = self.tensor_to_image(images[i])
+                                pil_image = self.resize_image(pil_image, 1024)
+                                all_images.append(pil_image)
+                        elif isinstance(images, list):
+                            # List of tensors
+                            for img_tensor in images[:max_images]:
+                                pil_image = self.tensor_to_image(img_tensor)
+                                pil_image = self.resize_image(pil_image, 1024)
+                                all_images.append(pil_image)
                     
-                    # Only show the chat history
-                    generated_content = self.chat_history.get_formatted_history()
+                    if all_images:
+                        # Create content with all images
+                        img_count = len(all_images)
+                        prefix = f"Analyzing {img_count} image{'s' if img_count > 1 else ''}. "
+                        if img_count > 1:
+                            prefix += "Please describe each image separately. "
+                        content = [f"{prefix}{prompt}"] + all_images
+                    else:
+                        raise ValueError("No images provided for image input type")
+                elif input_type == "video" and video is not None:
+                    if len(video.shape) == 4 and video.shape[0] > 1:
+                        frame_count = video.shape[0]
+                        frames = self.sample_video_frames(video)
+                        if frames:
+                            content = [f"This is a video with {frame_count} frames. {prompt}"] + frames
+                        else:
+                            raise ValueError("Error processing video frames")
+                    else:
+                        pil_image = self.tensor_to_image(video.squeeze(0) if len(video.shape) == 4 else video)
+                        pil_image = self.resize_image(pil_image, 1024)
+                        content = [f"This is a single frame from a video. {prompt}", pil_image]
+                elif input_type == "audio" and audio is not None:
+                    waveform = audio["waveform"]
+                    sample_rate = audio["sample_rate"]
+                    
+                    if waveform.dim() == 3:
+                        waveform = waveform.squeeze(0)
+                    elif waveform.dim() == 1:
+                        waveform = waveform.unsqueeze(0)
+                    
+                    if waveform.shape[0] > 1:
+                        waveform = torch.mean(waveform, dim=0, keepdim=True)
+                    
+                    if sample_rate != 16000:
+                        waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
+                    
+                    buffer = BytesIO()
+                    torchaudio.save(buffer, waveform, 16000, format="WAV")
+                    audio_bytes = buffer.getvalue()
+                    
+                    content = [prompt, {"mime_type": "audio/wav", "data": audio_bytes}]
                 else:
-                    # Non-chat mode uses the prepare_content method
-                    content_parts = self.prepare_content(
-                        prompt, input_type, text_input, images, video, audio, max_images
-                    )
-                    
-                    if structured_output:
-                        if isinstance(content_parts, list) and len(content_parts) > 0:
-                            if "parts" in content_parts[0]:
-                                for part in content_parts[0]["parts"]:
-                                    if "text" in part:
-                                        part["text"] = f"Please provide the response in a structured format. {part['text']}"
-                    
-                    response = model.generate_content(content_parts, generation_config=generation_config)
-                    generated_content = response.text
+                    raise ValueError(f"Invalid or missing input for {input_type}")
 
-            except Exception as e:
-                generated_content = f"Error: {str(e)}"
-        
+                # Initialize chat and send message
+                chat = model.start_chat(history=self.chat_history.get_messages_for_api())
+                response = chat.send_message(content, generation_config=generation_config)
+                
+                # Add to history and get formatted output
+                if isinstance(content, list):
+                    history_content = prompt
+                else:
+                    history_content = content
+                    
+                self.chat_history.add_message("user", history_content)
+                self.chat_history.add_message("assistant", response.text)
+                
+                # Only show the chat history
+                generated_content = self.chat_history.get_formatted_history()
+            else:
+                # Non-chat mode uses the prepare_content method
+                content_parts = self.prepare_content(
+                    prompt, input_type, text_input, images, video, audio, max_images
+                )
+                
+                if structured_output:
+                    if isinstance(content_parts, list) and len(content_parts) > 0:
+                        if "parts" in content_parts[0]:
+                            for part in content_parts[0]["parts"]:
+                                if "text" in part:
+                                    part["text"] = f"Please provide the response in a structured format. {part['text']}"
+                
+                response = model.generate_content(content_parts, generation_config=generation_config)
+                generated_content = response.text
+
+        except Exception as e:
+            generated_content = f"Error: {str(e)}"
+    
         # For analysis mode, return the text response and an empty placeholder image
         return (generated_content, self.create_placeholder_image())
         
