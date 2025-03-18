@@ -65,17 +65,10 @@ Make `config.json` file in the node main folder:
 ```json
 
 {
-    "GEMINI_API_KEY": "your_api_key_here",
-    "PROXY": ""
+    "GEMINI_API_KEY": "your_api_key_here"
 }
 
 ```
-
-### Proxy Setup (Optional)
-
-If you need to use a proxy:
-- Set it in config.json under the "PROXY" field
-- Format: "http://your-proxy:port" or "socks5://your-proxy:port"
 
 ## Node Inputs
 
