@@ -63,15 +63,12 @@ pip install torchaudio
 
 The `config.json` file in the nodes folder contains all configuration settings:
 ```json
+
 {
     "GEMINI_API_KEY": "your_api_key_here",
-    "PROXY": "",
-    "MODEL_NAME": "models/gemini-2.0-flash-exp",
-    "RPM_LIMIT": 10,
-    "TPM_LIMIT": 4000000,
-    "RPD_LIMIT": 1500,
-    "DEFAULT_CHAT_MODE": false
+    "PROXY": ""
 }
+
 ```
 
 ### Proxy Setup (Optional)
