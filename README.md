@@ -61,7 +61,7 @@ pip install torchaudio
 
 ### API Key Setup
 
-The `config.json` file in the nodes folder contains all configuration settings:
+Make `config.json` file in the node main folder:
 ```json
 
 {
