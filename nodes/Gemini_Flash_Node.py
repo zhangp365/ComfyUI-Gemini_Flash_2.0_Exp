@@ -1,6 +1,8 @@
 # Gemini_Flash_Node.py
 import os
 import json
+import base64
+import requests
 import google.generativeai as genai
 from io import BytesIO
 from PIL import Image
@@ -87,30 +89,41 @@ class Gemini_Flash_200_Exp:
             "required": {
                 "prompt": ("STRING", {"default": "Analyze the situation in details.", "multiline": True}),
                 "input_type": (["text", "image", "video", "audio"], {"default": "text"}),
+                "model_version": (["gemini-2.0-flash-exp", "gemini-2.0-flash-thinking-exp-1219", "gemini-2.0-flash-exp-image-generation"], {"default": "gemini-2.0-flash-exp"}),
+                "operation_mode": (["analysis", "generate_images"], {"default": "analysis"}),
                 "chat_mode": ("BOOLEAN", {"default": False}),
                 "clear_history": ("BOOLEAN", {"default": False})
             },
             "optional": {
                 "text_input": ("STRING", {"default": "", "multiline": True}),
-                "image": ("IMAGE",),
-                "video": ("IMAGE",),
-                "audio": ("AUDIO",),
+                "images": ("IMAGE", {"forceInput": False, "list": True}),  # Multiple images input
+                "video": ("IMAGE", ),
+                "audio": ("AUDIO", ),
                 "api_key": ("STRING", {"default": ""}),
                 "proxy": ("STRING", {"default": ""}),
                 "max_output_tokens": ("INT", {"default": 8192, "min": 1, "max": 8192}),
                 "temperature": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 1.0, "step": 0.1}),
-                "structured_output": ("BOOLEAN", {"default": False})
-                
+                "structured_output": ("BOOLEAN", {"default": False}),
+                "max_images": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
+                "batch_count": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
+                "seed": ("INT", {"default": 0, "min": 0}),
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("generated_content",)
+    RETURN_TYPES = ("STRING", "IMAGE")
+    RETURN_NAMES = ("generated_content", "generated_images")
     FUNCTION = "generate_content"
     CATEGORY = "Gemini Flash 2.0 Experimental"
 
     def tensor_to_image(self, tensor):
         tensor = tensor.cpu()
+        if len(tensor.shape) == 4:  # If tensor shape is [batch, H, W, channels]
+            if tensor.shape[0] == 1:  # Single image in batch
+                tensor = tensor.squeeze(0)
+            else:
+                # If first image in batch, get only that one
+                tensor = tensor[0]
+                
         image_np = tensor.squeeze().mul(255).clamp(0, 255).byte().numpy()
         image = Image.fromarray(image_np, mode='RGB')
         return image
@@ -145,30 +158,58 @@ class Gemini_Flash_200_Exp:
             frames.append(frame)
         return frames
 
-    def prepare_content(self, prompt, input_type, text_input, image, video, audio):
+    def prepare_content(self, prompt, input_type, text_input=None, images=None, video=None, audio=None, max_images=6):
         if input_type == "text":
             text_content = prompt if not text_input else f"{prompt}\n{text_input}"
             return [{"text": text_content}]
                 
-        elif input_type == "image" and image is not None:
-            pil_image = self.tensor_to_image(image)
-            pil_image = self.resize_image(pil_image, 1024)
-            # Convert image to bytes
-            img_byte_arr = BytesIO()
-            pil_image.save(img_byte_arr, format='PNG')
-            img_byte_arr = img_byte_arr.getvalue()
+        elif input_type == "image":
+            # Handle multiple images input
+            all_images = []
             
-            return [{
-                "parts": [
-                    {"text": prompt},
-                    {
+            # Process images if provided
+            if images is not None:
+                # Check if images is a tensor with batch dimension
+                if isinstance(images, torch.Tensor):
+                    if len(images.shape) == 4:  # [batch, H, W, C]
+                        # Limit number of images to max_images
+                        num_images = min(images.shape[0], max_images)
+                        
+                        for i in range(num_images):
+                            pil_image = self.tensor_to_image(images[i])
+                            pil_image = self.resize_image(pil_image, 1024)
+                            all_images.append(pil_image)
+                    else:  # Single image tensor [H, W, C]
+                        pil_image = self.tensor_to_image(images)
+                        pil_image = self.resize_image(pil_image, 1024)
+                        all_images.append(pil_image)
+                # Handle case where images is a list
+                elif isinstance(images, list):
+                    for img_tensor in images[:max_images]:  # Limit to max_images
+                        pil_image = self.tensor_to_image(img_tensor)
+                        pil_image = self.resize_image(pil_image, 1024)
+                        all_images.append(pil_image)
+                        
+            # If we have any images, create the parts structure
+            if all_images:
+                parts = [{"text": prompt}]
+                
+                for idx, img in enumerate(all_images):
+                    # Convert image to bytes
+                    img_byte_arr = BytesIO()
+                    img.save(img_byte_arr, format='PNG')
+                    img_byte_arr = img_byte_arr.getvalue()
+                    
+                    parts.append({
                         "inline_data": {
                             "mime_type": "image/png",
                             "data": img_byte_arr
                         }
-                    }
-                ]
-            }]
+                    })
+                
+                return [{"parts": parts}]
+            else:
+                raise ValueError("No valid images provided")
                 
         elif input_type == "video" and video is not None:
             # Handle video input (sequence of frames)
@@ -225,9 +266,169 @@ class Gemini_Flash_200_Exp:
         else:
             raise ValueError(f"Invalid or missing input for {input_type}")
 
-    def generate_content(self, prompt, input_type, chat_mode=False, clear_history=False,
-                        text_input=None, image=None, video=None, audio=None, 
-                        api_key="", proxy="",
+    def create_placeholder_image(self):
+        """Create a placeholder image tensor when generation fails"""
+        img = Image.new('RGB', (512, 512), color=(73, 109, 137))
+        image_array = np.array(img).astype(np.float32) / 255.0
+        return torch.from_numpy(image_array).unsqueeze(0)  # [1, H, W, 3]
+
+    def generate_images(self, prompt, model_version, images=None, batch_count=1, temperature=0.4, seed=0, max_images=6):
+        """Generate images using Gemini models with image generation capabilities"""
+        try:
+            # Special handling for the image generation model
+            is_image_generation_model = "image-generation" in model_version
+            
+            # Set up the Google Generative AI client
+            from google import genai
+            from google.genai import types
+            
+            client = genai.Client(api_key=self.api_key)
+            
+            # Set up generation config - add response_modalities for image generation model
+            if is_image_generation_model:
+                generation_config = types.GenerateContentConfig(
+                    temperature=temperature,
+                    response_modalities=['Text', 'Image']  # Critical for image generation
+                )
+            else:
+                generation_config = types.GenerateContentConfig(
+                    temperature=temperature
+                )
+            
+            # Process reference images if provided
+            content_parts = []
+            if images is not None:
+                # Convert tensor to PIL images
+                all_images = []
+                if isinstance(images, torch.Tensor):
+                    if len(images.shape) == 4:  # [batch, H, W, C]
+                        num_images = min(images.shape[0], max_images)
+                        for i in range(num_images):
+                            pil_image = self.tensor_to_image(images[i])
+                            pil_image = self.resize_image(pil_image, 1024)
+                            all_images.append(pil_image)
+                    else:  # Single image tensor
+                        pil_image = self.tensor_to_image(images)
+                        pil_image = self.resize_image(pil_image, 1024)
+                        all_images.append(pil_image)
+                elif isinstance(images, list):
+                    for img_tensor in images[:max_images]:
+                        pil_image = self.tensor_to_image(img_tensor)
+                        pil_image = self.resize_image(pil_image, 1024)
+                        all_images.append(pil_image)
+                
+                # If we have reference images, include them in the content
+                if all_images:
+                    # For the image generation model, we need a special prompt
+                    if is_image_generation_model:
+                        content_text = f"Generate a new image in the style of these reference images: {prompt}"
+                    else:
+                        content_text = f"Generate an image of: {prompt}"
+                    
+                    content_parts = [content_text] + all_images
+            else:
+                # Text-only prompt
+                if is_image_generation_model:
+                    content_text = f"Generate a detailed, high-quality image of: {prompt}"
+                else:
+                    content_text = f"Generate an image of: {prompt}"
+                
+                content_parts = content_text
+            
+            # Track all generated images
+            all_generated_images = []
+            status_text = ""
+            
+            # Generate images for each batch
+            for i in range(batch_count):
+                try:
+                    # Set seed if provided
+                    if seed != 0:
+                        current_seed = seed + i
+                        # Note: Seed is applied through an environment variable or similar mechanism
+                        # as the SDK doesn't directly support it in generation_config
+                    
+                    # Generate content
+                    response = client.models.generate_content(
+                        model=model_version,
+                        contents=content_parts,
+                        config=generation_config
+                    )
+                    
+                    # Extract images from the response
+                    batch_images = []
+                    
+                    # Extract the response text first
+                    response_text = ""
+                    
+                    if hasattr(response, 'candidates') and response.candidates:
+                        for candidate in response.candidates:
+                            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                                for part in candidate.content.parts:
+                                    # Extract text
+                                    if hasattr(part, 'text') and part.text:
+                                        response_text += part.text + "\n"
+                                    
+                                    # Extract images
+                                    if hasattr(part, 'inline_data') and part.inline_data:
+                                        try:
+                                            image_binary = part.inline_data.data
+                                            batch_images.append(image_binary)
+                                        except Exception as img_error:
+                                            print(f"Error extracting image from response: {str(img_error)}")
+                    
+                    if batch_images:
+                        all_generated_images.extend(batch_images)
+                        status_text += f"Batch {i+1}: Generated {len(batch_images)} images\n"
+                    else:
+                        status_text += f"Batch {i+1}: No images found in response. Text response: {response_text[:100]}...\n"
+                
+                except Exception as batch_error:
+                    status_text += f"Batch {i+1} error: {str(batch_error)}\n"
+            
+            # Process generated images into tensors
+            if all_generated_images:
+                tensors = []
+                for img_binary in all_generated_images:
+                    try:
+                        # Convert binary to PIL image
+                        image = Image.open(BytesIO(img_binary))
+                        
+                        # Ensure it's RGB
+                        if image.mode != "RGB":
+                            image = image.convert("RGB")
+                        
+                        # Convert to numpy array and normalize
+                        img_np = np.array(image).astype(np.float32) / 255.0
+                        
+                        # Create tensor with correct dimensions for ComfyUI [B, H, W, C]
+                        img_tensor = torch.from_numpy(img_np)[None,]
+                        tensors.append(img_tensor)
+                    except Exception as e:
+                        print(f"Error processing image: {e}")
+                
+                if tensors:
+                    # Combine all tensors into a batch
+                    image_tensors = torch.cat(tensors, dim=0)
+                    
+                    result_text = f"Successfully generated {len(tensors)} images using {model_version}.\n"
+                    result_text += f"Prompt: {prompt}\n"
+                    result_text += f"Details: {status_text}"
+                    
+                    return result_text, image_tensors
+            
+            # No images were generated successfully
+            return f"No images were generated with {model_version}. Details:\n{status_text}", self.create_placeholder_image()
+            
+        except Exception as e:
+            error_msg = f"Error in image generation: {str(e)}"
+            print(error_msg)
+            return error_msg, self.create_placeholder_image()
+
+    def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash-exp", 
+                        operation_mode="analysis", chat_mode=False, clear_history=False,
+                        text_input=None, images=None, video=None, audio=None, 
+                        api_key="", proxy="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False):
         """Generate content using Gemini model with various input types."""
         
@@ -257,7 +458,21 @@ class Gemini_Flash_200_Exp:
         if clear_history:
             self.chat_history.clear()
 
-        model_name = 'models/gemini-2.0-flash-exp'
+        # Handle image generation mode
+        if operation_mode == "generate_images":
+            with temporary_env_var('HTTP_PROXY', self.proxy), temporary_env_var('HTTPS_PROXY', self.proxy):
+                return self.generate_images(
+                    prompt=prompt,
+                    model_version=model_version,
+                    images=images,
+                    batch_count=batch_count,
+                    temperature=temperature,
+                    seed=seed,
+                    max_images=max_images
+                )
+
+        # For analysis mode (original functionality)
+        model_name = f'models/{model_version}'
         model = genai.GenerativeModel(model_name)
 
         # Apply fixed safety settings to the model
@@ -275,10 +490,32 @@ class Gemini_Flash_200_Exp:
                     if input_type == "text":
                         text_content = prompt if not text_input else f"{prompt}\n{text_input}"
                         content = text_content
-                    elif input_type == "image" and image is not None:
-                        pil_image = self.tensor_to_image(image)
-                        pil_image = self.resize_image(pil_image, 1024)
-                        content = [prompt, pil_image]
+                    elif input_type == "image":
+                        # Handle multiple images
+                        all_images = []
+                        
+                        if images is not None:
+                            if isinstance(images, torch.Tensor) and len(images.shape) == 4:
+                                # Batch of images
+                                num_to_process = min(images.shape[0], max_images)
+                                for i in range(num_to_process):
+                                    pil_image = self.tensor_to_image(images[i])
+                                    pil_image = self.resize_image(pil_image, 1024)
+                                    all_images.append(pil_image)
+                            elif isinstance(images, list):
+                                # List of tensors
+                                for img_tensor in images[:max_images]:
+                                    pil_image = self.tensor_to_image(img_tensor)
+                                    pil_image = self.resize_image(pil_image, 1024)
+                                    all_images.append(pil_image)
+                        
+                        if all_images:
+                            # Create content with all images
+                            img_count = len(all_images)
+                            prefix = f"Analyzing {img_count} image{'s' if img_count > 1 else ''}. "
+                            content = [f"{prefix}{prompt}"] + all_images
+                        else:
+                            raise ValueError("No images provided for image input type")
                     elif input_type == "video" and video is not None:
                         if len(video.shape) == 4 and video.shape[0] > 1:
                             frame_count = video.shape[0]
@@ -331,7 +568,10 @@ class Gemini_Flash_200_Exp:
                     generated_content = self.chat_history.get_formatted_history()
                 else:
                     # Non-chat mode uses the prepare_content method
-                    content_parts = self.prepare_content(prompt, input_type, text_input, image, video, audio)
+                    content_parts = self.prepare_content(
+                        prompt, input_type, text_input, images, video, audio, max_images
+                    )
+                    
                     if structured_output:
                         if isinstance(content_parts, list) and len(content_parts) > 0:
                             if "parts" in content_parts[0]:
@@ -345,7 +585,8 @@ class Gemini_Flash_200_Exp:
             except Exception as e:
                 generated_content = f"Error: {str(e)}"
         
-        return (generated_content,)
+        # For analysis mode, return the text response and an empty placeholder image
+        return (generated_content, self.create_placeholder_image())
         
 NODE_CLASS_MAPPINGS = {
     "Gemini_Flash_200_Exp": Gemini_Flash_200_Exp,
