@@ -1,5 +1,10 @@
 # ComfyUI-Gemini_Flash_2.0_Exp
 
+## Support My Work
+If you find this project helpful, consider buying me a coffee:
+
+[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=shmuelronen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://buymeacoffee.com/shmuelronen)
+
 A ComfyUI custom node that integrates Google's Gemini Flash 2.0 Experimental model, enabling multimodal analysis of text, images, video frames, and audio directly within ComfyUI workflows. Now with image generation capabilities!
 
 ![image](https://github.com/user-attachments/assets/ad7cdf57-3d42-4d61-bb23-45b1ce228bca)
