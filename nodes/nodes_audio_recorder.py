@@ -148,5 +148,5 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AudioRecorder": "🎤 Audio Recorder"
+    "AudioRecorder": "🎤 Audio Recorder Gemini"
 }

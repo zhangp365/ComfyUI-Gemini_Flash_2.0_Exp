@@ -81,7 +81,7 @@ class Gemini_Flash_200_Exp:
                 "clear_history": ("BOOLEAN", {"default": False})
             },
             "optional": {
-                "text_input": ("STRING", {"default": "", "multiline": True}),
+                "Additional_Context": ("STRING", {"default": "", "multiline": True}),
                 "images": ("IMAGE", {"forceInput": False, "list": True}),  # Multiple images input
                 "video": ("IMAGE", ),
                 "audio": ("AUDIO", ),
@@ -143,9 +143,9 @@ class Gemini_Flash_200_Exp:
             frames.append(frame)
         return frames
 
-    def prepare_content(self, prompt, input_type, text_input=None, images=None, video=None, audio=None, max_images=6):
+    def prepare_content(self, prompt, input_type, Additional_Context=None, images=None, video=None, audio=None, max_images=6):
         if input_type == "text":
-            text_content = prompt if not text_input else f"{prompt}\n{text_input}"
+            text_content = prompt if not Additional_Context else f"{prompt}\n{Additional_Context}"
             return [{"text": text_content}]
                 
         elif input_type == "image":
@@ -421,7 +421,7 @@ class Gemini_Flash_200_Exp:
 
     def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash-exp", 
                         operation_mode="analysis", chat_mode=False, clear_history=False,
-                        text_input=None, images=None, video=None, audio=None, 
+                        Additional_Context=None, images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False):
         """Generate content using Gemini model with various input types."""
@@ -475,7 +475,7 @@ class Gemini_Flash_200_Exp:
             if chat_mode:
                 # Special handling for chat mode
                 if input_type == "text":
-                    text_content = prompt if not text_input else f"{prompt}\n{text_input}"
+                    text_content = prompt if not Additional_Context else f"{prompt}\n{Additional_Context}"
                     content = text_content
                 elif input_type == "image":
                     # Handle multiple images
@@ -558,7 +558,7 @@ class Gemini_Flash_200_Exp:
             else:
                 # Non-chat mode uses the prepare_content method
                 content_parts = self.prepare_content(
-                    prompt, input_type, text_input, images, video, audio, max_images
+                    prompt, input_type, Additional_Context, images, video, audio, max_images
                 )
                 
                 if structured_output:
