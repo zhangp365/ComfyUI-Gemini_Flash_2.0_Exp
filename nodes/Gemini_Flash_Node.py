@@ -382,8 +382,11 @@ class Gemini_Flash_200_Exp:
             if all_generated_images:
                 tensors = []
                 for img_binary in all_generated_images:
-                    try:                                                      
-                        img_binary = base64.b64decode(img_binary)
+                    try: 
+                        try:
+                            img_binary = base64.b64decode(img_binary)
+                        except Exception as base64_error:
+                            logger.exception(base64_error)
                         # Convert binary to PIL image
                         image = Image.open(BytesIO(img_binary))
                         
