@@ -9,6 +9,9 @@ from PIL import Image
 import torch
 import torchaudio
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 p = os.path.dirname(os.path.realpath(__file__))
 
@@ -372,13 +375,15 @@ class Gemini_Flash_200_Exp:
                         status_text += f"Batch {i+1}: No images found in response. Text response: {response_text[:100]}...\n"
                 
                 except Exception as batch_error:
+                    logger.exception(batch_error)
                     status_text += f"Batch {i+1} error: {str(batch_error)}\n"
             
             # Process generated images into tensors
             if all_generated_images:
                 tensors = []
                 for img_binary in all_generated_images:
-                    try:
+                    try:                                                      
+                        img_binary = base64.b64decode(img_binary)
                         # Convert binary to PIL image
                         image = Image.open(BytesIO(img_binary))
                         
@@ -394,6 +399,7 @@ class Gemini_Flash_200_Exp:
                         tensors.append(img_tensor)
                     except Exception as e:
                         print(f"Error processing image: {e}")
+                        logger.exception(e)
                 
                 if tensors:
                     # Combine all tensors into a batch

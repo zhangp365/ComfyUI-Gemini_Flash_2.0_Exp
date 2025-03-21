@@ -1,7 +1,8 @@
 import os
 import json
 import importlib.util
-
+import logging
+logger = logging.getLogger(__name__)
 # Get the current directory and nodes directory
 current_path = os.path.dirname(os.path.realpath(__file__))
 nodes_path = os.path.join(current_path, "nodes")
@@ -42,12 +43,12 @@ except json.JSONDecodeError:
 def load_module(file_name):
     module_path = os.path.join(nodes_path, file_name)
     if not os.path.exists(module_path):
-        print(f"Cannot find {module_path}")
+        logger.error(f"Cannot find {module_path}")
         return None
     
     spec = importlib.util.spec_from_file_location(file_name[:-3], module_path)
     if spec is None:
-        print(f"Failed to create spec for {file_name}")
+        logger.error(f"Failed to create spec for {file_name}")
         return None
     
     module = importlib.util.module_from_spec(spec)
@@ -55,7 +56,7 @@ def load_module(file_name):
         spec.loader.exec_module(module)
         return module
     except Exception as e:
-        print(f"Error loading {file_name}: {str(e)}")
+        logger.exception(f"Error loading {file_name}: {str(e)}")
         return None
 
 # Load the modules
