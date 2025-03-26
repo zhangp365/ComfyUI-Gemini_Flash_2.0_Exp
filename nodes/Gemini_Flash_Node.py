@@ -92,6 +92,7 @@ class Gemini_Flash_200_Exp:
                 "max_images": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
                 "batch_count": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
                 "seed": ("INT", {"default": 0, "min": 0}),
+                "max_frames_of_video": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
             }
         }
 
@@ -143,7 +144,7 @@ class Gemini_Flash_200_Exp:
             frames.append(frame)
         return frames
 
-    def prepare_content(self, prompt, input_type, Additional_Context=None, images=None, video=None, audio=None, max_images=6):
+    def prepare_content(self, prompt, input_type, Additional_Context=None, images=None, video=None, audio=None, max_images=6, max_frames_of_video=6):
         if input_type == "text":
             text_content = prompt if not Additional_Context else f"{prompt}\n{Additional_Context}"
             return [{"text": text_content}]
@@ -204,7 +205,7 @@ class Gemini_Flash_200_Exp:
                 
         elif input_type == "video" and video is not None:
             # Handle video input (sequence of frames)
-            frames = self.sample_video_frames(video)
+            frames = self.sample_video_frames(video, num_samples=max_frames_of_video)
             if frames:
                 # Convert frames to proper format
                 parts = [{"text": f"Analyzing video frames. {prompt}"}]
@@ -426,7 +427,7 @@ class Gemini_Flash_200_Exp:
                         operation_mode="analysis", chat_mode=False, clear_history=False,
                         Additional_Context=None, images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
-                        max_output_tokens=8192, temperature=0.4, structured_output=False):
+                        max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6):
         """Generate content using Gemini model with various input types."""
         
         # Set all safety settings to block_none by default
@@ -511,7 +512,8 @@ class Gemini_Flash_200_Exp:
                 elif input_type == "video" and video is not None:
                     if len(video.shape) == 4 and video.shape[0] > 1:
                         frame_count = video.shape[0]
-                        frames = self.sample_video_frames(video)
+                        frames = self.sample_video_frames(video, num_samples=max_frames_of_video)
+                        logger.info(f"init frame count: {frame_count}, frames: {len(frames)}")
                         if frames:
                             content = [f"This is a video with {frame_count} frames. {prompt}"] + frames
                         else:
@@ -561,7 +563,7 @@ class Gemini_Flash_200_Exp:
             else:
                 # Non-chat mode uses the prepare_content method
                 content_parts = self.prepare_content(
-                    prompt, input_type, Additional_Context, images, video, audio, max_images
+                    prompt, input_type, Additional_Context, images, video, audio, max_images, max_frames_of_video
                 )
                 
                 if structured_output:
