@@ -74,6 +74,9 @@ if gemini_module and audio_module:
         **gemini_module.NODE_DISPLAY_NAME_MAPPINGS,
         **audio_module.NODE_DISPLAY_NAME_MAPPINGS
     }
+elif gemini_module:
+    NODE_CLASS_MAPPINGS = gemini_module.NODE_CLASS_MAPPINGS
+    NODE_DISPLAY_NAME_MAPPINGS = gemini_module.NODE_DISPLAY_NAME_MAPPINGS
 else:
     # Fallback for error cases
     NODE_CLASS_MAPPINGS = {}
