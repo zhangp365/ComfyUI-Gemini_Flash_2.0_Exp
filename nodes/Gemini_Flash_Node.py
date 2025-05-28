@@ -383,11 +383,30 @@ class Gemini_Flash_200_Exp:
             if all_generated_images:
                 tensors = []
                 for img_binary in all_generated_images:
-                    try: 
-                        try:
-                            img_binary = base64.b64decode(img_binary)
-                        except Exception as base64_error:
-                            logger.exception(base64_error)
+                    try:                         
+                        # 判断是否需要进行 base64 解码
+                        if isinstance(img_binary, str):
+                            # 如果是字符串，尝试 base64 解码
+                            try:
+                                img_binary = base64.b64decode(img_binary)
+                                logger.info(f"Successfully decoded base64 string to bytes")
+                            except Exception as base64_error:
+                                logger.exception(base64_error)
+                                continue
+                        elif isinstance(img_binary, bytes):
+                            # 如果已经是 bytes，检查是否是 base64 编码的字符串
+                            try:
+                                # 尝试将 bytes 解码为字符串，然后检查是否是有效的 base64
+                                potential_b64_str = img_binary.decode('utf-8')
+                                # 简单检查是否看起来像 base64（长度是4的倍数，只包含base64字符）
+                                if len(potential_b64_str) % 4 == 0 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in potential_b64_str):
+                                    img_binary = base64.b64decode(potential_b64_str)
+                                    logger.info(f"Decoded base64 from bytes string")
+                            except UnicodeDecodeError as base64_error:
+                                logger.exception(base64_error)
+                                                
+                        logger.debug(f"Final img_binary type: {type(img_binary)}, size: {len(img_binary) if isinstance(img_binary, bytes) else 'N/A'}")
+                        
                         # Convert binary to PIL image
                         image = Image.open(BytesIO(img_binary))
                         
