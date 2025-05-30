@@ -93,6 +93,7 @@ class Gemini_Flash_200_Exp:
                 "batch_count": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
                 "seed": ("INT", {"default": 0, "min": 0}),
                 "max_frames_of_video": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
+                "request_exception_handle": (["raise_exception", "output_exception"], {"default": "raise_exception"})
             }
         }
 
@@ -446,7 +447,8 @@ class Gemini_Flash_200_Exp:
                         operation_mode="analysis", chat_mode=False, clear_history=False,
                         Additional_Context=None, images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
-                        max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6):
+                        max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6,
+                        request_exception_handle="raise_exception"):
         """Generate content using Gemini model with various input types."""
         
         # Set all safety settings to block_none by default
@@ -596,7 +598,10 @@ class Gemini_Flash_200_Exp:
                 generated_content = response.text
 
         except Exception as e:
-            generated_content = f"Error: {str(e)}"
+            if request_exception_handle == "raise_exception":
+                raise e
+            elif request_exception_handle == "output_exception":
+                generated_content = f"Error: {str(e)}"
     
         # For analysis mode, return the text response and an empty placeholder image
         return (generated_content, self.create_placeholder_image())
