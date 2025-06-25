@@ -75,7 +75,7 @@ class Gemini_Flash_200_Exp:
             "required": {
                 "prompt": ("STRING", {"default": "Analyze the situation in details.", "multiline": True}),
                 "input_type": (["text", "image", "video", "audio"], {"default": "text"}),
-                "model_version": (["gemini-2.0-flash-exp", "gemini-2.0-flash-thinking-exp-1219", "gemini-2.0-flash-exp-image-generation"], {"default": "gemini-2.0-flash-exp"}),
+                "model_version": (["gemini-2.0-flash", "gemini-2.0-flash-preview-image-generation"], {"default": "gemini-2.0-flash"}),
                 "operation_mode": (["analysis", "generate_images"], {"default": "analysis"}),
                 "chat_mode": ("BOOLEAN", {"default": False}),
                 "clear_history": ("BOOLEAN", {"default": False})
@@ -443,7 +443,7 @@ class Gemini_Flash_200_Exp:
             print(error_msg)
             return error_msg, self.create_placeholder_image()
 
-    def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash-exp", 
+    def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash", 
                         operation_mode="analysis", chat_mode=False, clear_history=False,
                         Additional_Context=None, images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
