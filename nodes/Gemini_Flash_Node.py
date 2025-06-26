@@ -75,7 +75,7 @@ class Gemini_Flash_200_Exp:
             "required": {
                 "prompt": ("STRING", {"default": "Analyze the situation in details.", "multiline": True}),
                 "input_type": (["text", "image", "video", "audio"], {"default": "text"}),
-                "model_version": (["gemini-2.0-flash", "gemini-2.0-flash-preview-image-generation"], {"default": "gemini-2.0-flash"}),
+                "model_version": (["gemini-2.0-flash","gemini-2.5-flash-lite-preview-06-17", "gemini-2.0-flash-preview-image-generation", "gemini-2.5-flash"], {"default": "gemini-2.5-flash-lite-preview-06-17"}),
                 "operation_mode": (["analysis", "generate_images"], {"default": "analysis"}),
                 "chat_mode": ("BOOLEAN", {"default": False}),
                 "clear_history": ("BOOLEAN", {"default": False})
