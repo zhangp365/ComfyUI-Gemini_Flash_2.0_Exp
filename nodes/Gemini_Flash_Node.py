@@ -353,7 +353,6 @@ class Gemini_Flash_200_Exp:
                     
                     # Extract the response text first
                     response_text = ""
-                    
                     if hasattr(response, 'candidates') and response.candidates:
                         for candidate in response.candidates:
                             if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
@@ -369,12 +368,14 @@ class Gemini_Flash_200_Exp:
                                             batch_images.append(image_binary)
                                         except Exception as img_error:
                                             print(f"Error extracting image from response: {str(img_error)}")
-                    
+                            elif hasattr(candidate, 'finish_reason'):
+                                logger.info(f"response.finish_reason: {candidate.finish_reason}")
+                                response_text += f"{candidate.finish_reason}\n"
                     if batch_images:
                         all_generated_images.extend(batch_images)
                         status_text += f"Batch {i+1}: Generated {len(batch_images)} images\n"
                     else:
-                        status_text += f"Batch {i+1}: No images found in response. Text response: {response_text[:100]}...\n"
+                        status_text += f"Batch {i+1}: No images found in response. Text response: {response_text}\n"
                 
                 except Exception as batch_error:
                     logger.exception(batch_error)
