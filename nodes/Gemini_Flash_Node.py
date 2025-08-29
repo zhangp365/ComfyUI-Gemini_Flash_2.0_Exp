@@ -83,6 +83,7 @@ class Gemini_Flash_200_Exp:
             "optional": {
                 "Additional_Context": ("STRING", {"default": "", "multiline": True}),
                 "images": ("IMAGE", {"forceInput": False, "list": True}),  # Multiple images input
+                "second_images": ("IMAGE", {"forceInput": False, "list": True}),  # Second set of images for different resolutions
                 "video": ("IMAGE", ),
                 "audio": ("AUDIO", ),
                 "api_key": ("STRING", {"default": ""}),
@@ -145,43 +146,77 @@ class Gemini_Flash_200_Exp:
             frames.append(frame)
         return frames
 
-    def prepare_content(self, prompt, input_type, Additional_Context=None, images=None, video=None, audio=None, max_images=6, max_frames_of_video=6):
+    def process_image_inputs(self, images, second_images, max_images):
+        """
+        通用方法：处理图像输入，包括主图像和次图像
+        
+        Args:
+            images: 主图像输入
+            second_images: 次图像输入
+            max_images: 最大图像数量限制
+            
+        Returns:
+            list: 处理后的PIL图像列表
+        """
+        all_images = []
+        
+        # 处理主图像
+        if images is not None:
+            all_images.extend(self._convert_tensors_to_pil(images, max_images))
+        
+        # 处理次图像
+        if second_images is not None:
+            all_images.extend(self._convert_tensors_to_pil(second_images, max_images))
+        
+        return all_images
+    
+    def _convert_tensors_to_pil(self, image_input, max_images):
+        """
+        将图像张量转换为PIL图像
+        
+        Args:
+            image_input: 图像输入（张量或列表）
+            max_images: 最大图像数量限制
+            
+        Returns:
+            list: PIL图像列表
+        """
+        pil_images = []
+        
+        if isinstance(image_input, torch.Tensor):
+            if len(image_input.shape) == 4:  # [batch, H, W, C]
+                num_images = min(image_input.shape[0], max_images)
+                for i in range(num_images):
+                    pil_image = self.tensor_to_image(image_input[i])
+                    pil_image = self.resize_image(pil_image, 1024)
+                    pil_images.append(pil_image)
+            else:  # Single image tensor [H, W, C]
+                pil_image = self.tensor_to_image(image_input)
+                pil_image = self.resize_image(pil_image, 1024)
+                pil_images.append(pil_image)
+        elif isinstance(image_input, list):
+            for img_tensor in image_input[:max_images]:
+                pil_image = self.tensor_to_image(img_tensor)
+                pil_image = self.resize_image(pil_image, 1024)
+                pil_images.append(pil_image)
+        
+        return pil_images
+
+    def prepare_content(self, prompt, input_type, Additional_Context=None, images=None, second_images=None, video=None, audio=None, max_images=6, max_frames_of_video=6):
         if input_type == "text":
             text_content = prompt if not Additional_Context else f"{prompt}\n{Additional_Context}"
             return [{"text": text_content}]
                 
         elif input_type == "image":
-            # Handle multiple images input
-            all_images = []
+            # 使用通用方法处理图像输入
+            all_images = self.process_image_inputs(images, second_images, max_images)
             
-            # Process images if provided
-            if images is not None:
-                # Check if images is a tensor with batch dimension
-                if isinstance(images, torch.Tensor):
-                    if len(images.shape) == 4:  # [batch, H, W, C]
-                        # Limit number of images to max_images
-                        num_images = min(images.shape[0], max_images)
-                        
-                        for i in range(num_images):
-                            pil_image = self.tensor_to_image(images[i])
-                            pil_image = self.resize_image(pil_image, 1024)
-                            all_images.append(pil_image)
-                    else:  # Single image tensor [H, W, C]
-                        pil_image = self.tensor_to_image(images)
-                        pil_image = self.resize_image(pil_image, 1024)
-                        all_images.append(pil_image)
-                # Handle case where images is a list
-                elif isinstance(images, list):
-                    for img_tensor in images[:max_images]:  # Limit to max_images
-                        pil_image = self.tensor_to_image(img_tensor)
-                        pil_image = self.resize_image(pil_image, 1024)
-                        all_images.append(pil_image)
-                        
             # If we have any images, create the parts structure
             if all_images:
                 # Modify prompt to handle multiple images
-                if len(all_images) > 1:
-                    modified_prompt = f"Analyze these {len(all_images)} images. {prompt} Please describe each image separately."
+                total_images = len(all_images)
+                if total_images > 1:
+                    modified_prompt = f"Analyze these {total_images} images. {prompt} Please describe each image separately."
                 else:
                     modified_prompt = prompt
                     
@@ -265,7 +300,7 @@ class Gemini_Flash_200_Exp:
         image_array = np.array(img).astype(np.float32) / 255.0
         return torch.from_numpy(image_array).unsqueeze(0)  # [1, H, W, 3]
 
-    def generate_images(self, prompt, model_version, images=None, batch_count=1, temperature=0.4, seed=0, max_images=6):
+    def generate_images(self, prompt, model_version, images=None, second_images=None, batch_count=1, temperature=0.4, seed=0, max_images=6):
         """Generate images using Gemini models with image generation capabilities"""
         try:
             # Special handling for the image generation model
@@ -288,37 +323,18 @@ class Gemini_Flash_200_Exp:
                     temperature=temperature
                 )
             
-            # Process reference images if provided
-            content_parts = []
-            if images is not None:
-                # Convert tensor to PIL images
-                all_images = []
-                if isinstance(images, torch.Tensor):
-                    if len(images.shape) == 4:  # [batch, H, W, C]
-                        num_images = min(images.shape[0], max_images)
-                        for i in range(num_images):
-                            pil_image = self.tensor_to_image(images[i])
-                            pil_image = self.resize_image(pil_image, 1024)
-                            all_images.append(pil_image)
-                    else:  # Single image tensor
-                        pil_image = self.tensor_to_image(images)
-                        pil_image = self.resize_image(pil_image, 1024)
-                        all_images.append(pil_image)
-                elif isinstance(images, list):
-                    for img_tensor in images[:max_images]:
-                        pil_image = self.tensor_to_image(img_tensor)
-                        pil_image = self.resize_image(pil_image, 1024)
-                        all_images.append(pil_image)
+            # 使用通用方法处理参考图像
+            all_images = self.process_image_inputs(images, second_images, max_images)
+            
+            # If we have reference images, include them in the content
+            if all_images:
+                # For the image generation model, we need a special prompt
+                if is_image_generation_model:
+                    content_text = f"Generate a new image in the style of these reference images: {prompt}"
+                else:
+                    content_text = f"Generate an image of: {prompt}"
                 
-                # If we have reference images, include them in the content
-                if all_images:
-                    # For the image generation model, we need a special prompt
-                    if is_image_generation_model:
-                        content_text = f"Generate a new image in the style of these reference images: {prompt}"
-                    else:
-                        content_text = f"Generate an image of: {prompt}"
-                    
-                    content_parts = [content_text] + all_images
+                content_parts = [content_text] + all_images
             else:
                 # Text-only prompt
                 if is_image_generation_model:
@@ -446,7 +462,7 @@ class Gemini_Flash_200_Exp:
 
     def generate_content(self, prompt, input_type, model_version="gemini-2.0-flash", 
                         operation_mode="analysis", chat_mode=False, clear_history=False,
-                        Additional_Context=None, images=None, video=None, audio=None, 
+                        Additional_Context=None, images=None, second_images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6,
                         request_exception_handle="raise_exception"):
@@ -479,6 +495,7 @@ class Gemini_Flash_200_Exp:
                 prompt=prompt,
                 model_version=model_version,
                 images=images,
+                second_images=second_images,
                 batch_count=batch_count,
                 temperature=temperature,
                 seed=seed,
@@ -504,23 +521,8 @@ class Gemini_Flash_200_Exp:
                     text_content = prompt if not Additional_Context else f"{prompt}\n{Additional_Context}"
                     content = text_content
                 elif input_type == "image":
-                    # Handle multiple images
-                    all_images = []
-                    
-                    if images is not None:
-                        if isinstance(images, torch.Tensor) and len(images.shape) == 4:
-                            # Batch of images
-                            num_to_process = min(images.shape[0], max_images)
-                            for i in range(num_to_process):
-                                pil_image = self.tensor_to_image(images[i])
-                                pil_image = self.resize_image(pil_image, 1024)
-                                all_images.append(pil_image)
-                        elif isinstance(images, list):
-                            # List of tensors
-                            for img_tensor in images[:max_images]:
-                                pil_image = self.tensor_to_image(img_tensor)
-                                pil_image = self.resize_image(pil_image, 1024)
-                                all_images.append(pil_image)
+                    # 使用通用方法处理图像
+                    all_images = self.process_image_inputs(images, second_images, max_images)
                     
                     if all_images:
                         # Create content with all images
@@ -585,7 +587,7 @@ class Gemini_Flash_200_Exp:
             else:
                 # Non-chat mode uses the prepare_content method
                 content_parts = self.prepare_content(
-                    prompt, input_type, Additional_Context, images, video, audio, max_images, max_frames_of_video
+                    prompt, input_type, Additional_Context, images, second_images, video, audio, max_images, max_frames_of_video
                 )
                 
                 if structured_output:
