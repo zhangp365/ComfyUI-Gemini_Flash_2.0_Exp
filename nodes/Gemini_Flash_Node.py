@@ -188,16 +188,16 @@ class Gemini_Flash_200_Exp:
                 num_images = min(image_input.shape[0], max_images)
                 for i in range(num_images):
                     pil_image = self.tensor_to_image(image_input[i])
-                    pil_image = self.resize_image(pil_image, 1024)
+                    # pil_image = self.resize_image(pil_image, 1024)
                     pil_images.append(pil_image)
             else:  # Single image tensor [H, W, C]
                 pil_image = self.tensor_to_image(image_input)
-                pil_image = self.resize_image(pil_image, 1024)
+                # pil_image = self.resize_image(pil_image, 1024)
                 pil_images.append(pil_image)
         elif isinstance(image_input, list):
             for img_tensor in image_input[:max_images]:
                 pil_image = self.tensor_to_image(img_tensor)
-                pil_image = self.resize_image(pil_image, 1024)
+                # pil_image = self.resize_image(pil_image, 1024)
                 pil_images.append(pil_image)
         
         return pil_images
@@ -212,15 +212,8 @@ class Gemini_Flash_200_Exp:
             all_images = self.process_image_inputs(images, second_images, max_images)
             
             # If we have any images, create the parts structure
-            if all_images:
-                # Modify prompt to handle multiple images
-                total_images = len(all_images)
-                if total_images > 1:
-                    modified_prompt = f"Analyze these {total_images} images. {prompt} Please describe each image separately."
-                else:
-                    modified_prompt = prompt
-                    
-                parts = [{"text": modified_prompt}]
+            if all_images:                    
+                parts = [{"text": prompt}]
                 
                 for idx, img in enumerate(all_images):
                     # Convert image to bytes
