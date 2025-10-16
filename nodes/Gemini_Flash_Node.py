@@ -354,36 +354,38 @@ class Gemini_Flash_200_Exp:
                         # Note: Seed is applied through an environment variable or similar mechanism
                         # as the SDK doesn't directly support it in generation_config
                     
-                    # Generate content
-                    response = client.models.generate_content(
+                    # Generate content using streaming
+                    batch_images = []
+                    response_text = ""
+                    
+                    for chunk in client.models.generate_content_stream(
                         model=model_version,
                         contents=content_parts,
                         config=generation_config
-                    )
+                    ):
+                        if (
+                            chunk.candidates is None
+                            or chunk.candidates[0].content is None
+                            or chunk.candidates[0].content.parts is None
+                        ):
+                            continue
+                        
+                        # Extract images from chunk
+                        if (chunk.candidates[0].content.parts[0].inline_data and 
+                            chunk.candidates[0].content.parts[0].inline_data.data):
+                            inline_data = chunk.candidates[0].content.parts[0].inline_data
+                            data_buffer = inline_data.data
+                            batch_images.append(data_buffer)
+                        else:
+                            # Extract text from chunk
+                            if hasattr(chunk, 'text') and chunk.text:
+                                response_text += chunk.text
+                        
+                        # Check for finish_reason
+                        if hasattr(chunk.candidates[0], 'finish_reason'):
+                            logger.info(f"chunk.finish_reason: {chunk.candidates[0].finish_reason}")
+                            response_text += f"{chunk.candidates[0].finish_reason}\n"
                     
-                    # Extract images from the response
-                    batch_images = []
-                    
-                    # Extract the response text first
-                    response_text = ""
-                    if hasattr(response, 'candidates') and response.candidates:
-                        for candidate in response.candidates:
-                            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
-                                for part in candidate.content.parts:
-                                    # Extract text
-                                    if hasattr(part, 'text') and part.text:
-                                        response_text += part.text + "\n"
-                                    
-                                    # Extract images
-                                    if hasattr(part, 'inline_data') and part.inline_data:
-                                        try:
-                                            image_binary = part.inline_data.data
-                                            batch_images.append(image_binary)
-                                        except Exception as img_error:
-                                            print(f"Error extracting image from response: {str(img_error)}")
-                            elif hasattr(candidate, 'finish_reason'):
-                                logger.info(f"response.finish_reason: {candidate.finish_reason}")
-                                response_text += f"{candidate.finish_reason}\n"
                     if batch_images:
                         all_generated_images.extend(batch_images)
                         status_text += f"Batch {i+1}: Generated {len(batch_images)} images\n"
