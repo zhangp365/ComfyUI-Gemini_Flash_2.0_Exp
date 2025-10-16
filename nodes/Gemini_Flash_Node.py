@@ -75,7 +75,7 @@ class Gemini_Flash_200_Exp:
             "required": {
                 "prompt": ("STRING", {"default": "Analyze the situation in details.", "multiline": True}),
                 "input_type": (["text", "image", "video", "audio"], {"default": "image"}),
-                "model_version": (["gemini-flash-lite-latest","gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-image-preview"], {"default": "gemini-2.5-flash-image-preview"}),
+                "model_version": (["gemini-flash-lite-latest","gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-image"], {"default": "gemini-2.5-flash-image"}),
                 "operation_mode": (["analysis", "generate_images"], {"default": "generate_images"}),
                 "chat_mode": ("BOOLEAN", {"default": False}),
                 "clear_history": ("BOOLEAN", {"default": False})
@@ -94,6 +94,7 @@ class Gemini_Flash_200_Exp:
                 "batch_count": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
                 "seed": ("INT", {"default": 0, "min": 0}),
                 "max_frames_of_video": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
+                "aspect_ratio": (["auto", "1:1", "3:2", "16:9", "5:4", "4:3", "9:16", "2:3", "4:5", "9:21", "21:9"], {"default": "auto"}),
                 "request_exception_handle": (["raise_exception", "output_exception"], {"default": "raise_exception"})
             }
         }
@@ -293,11 +294,11 @@ class Gemini_Flash_200_Exp:
         image_array = np.array(img).astype(np.float32) / 255.0
         return torch.from_numpy(image_array).unsqueeze(0)  # [1, H, W, 3]
 
-    def generate_images(self, prompt, model_version, images=None, second_images=None, batch_count=1, temperature=0.4, seed=0, max_images=6):
+    def generate_images(self, prompt, model_version, images=None, second_images=None, batch_count=1, temperature=0.4, seed=0, max_images=6, aspect_ratio="auto"):
         """Generate images using Gemini models with image generation capabilities"""
         try:
             # Special handling for the image generation model
-            is_image_generation_model = "image-generation" in model_version
+            is_image_generation_model = "image" in model_version
             
             # Set up the Google Generative AI client
             from google import genai
@@ -309,7 +310,10 @@ class Gemini_Flash_200_Exp:
             if is_image_generation_model:
                 generation_config = types.GenerateContentConfig(
                     temperature=temperature,
-                    response_modalities=['Text', 'Image']  # Critical for image generation
+                    response_modalities=['Text', 'Image'],  
+                    image_config=types.ImageConfig(
+                        aspect_ratio=aspect_ratio
+                    )
                 )
             else:
                 generation_config = types.GenerateContentConfig(
@@ -458,7 +462,7 @@ class Gemini_Flash_200_Exp:
                         Additional_Context=None, images=None, second_images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6,
-                        request_exception_handle="raise_exception"):
+                        aspect_ratio="auto", request_exception_handle="raise_exception"):
         """Generate content using Gemini model with various input types."""
         
         # Set all safety settings to block_none by default
@@ -492,7 +496,8 @@ class Gemini_Flash_200_Exp:
                 batch_count=batch_count,
                 temperature=temperature,
                 seed=seed,
-                max_images=max_images
+                max_images=max_images,
+                aspect_ratio=aspect_ratio
             )
 
         # For analysis mode (original functionality)
