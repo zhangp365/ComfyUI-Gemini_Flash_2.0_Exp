@@ -363,34 +363,34 @@ class Gemini_Flash_200_Exp:
                         contents=content_parts,
                         config=generation_config
                     ):
+
                         if (
                             chunk.candidates is None
                             or chunk.candidates[0].content is None
                             or chunk.candidates[0].content.parts is None
                         ):
-                            continue
-                        
+                            continue                        
+                        logger.info(f"result chunk:{chunk}")
                         # Extract images from chunk
                         if (chunk.candidates[0].content.parts[0].inline_data and 
                             chunk.candidates[0].content.parts[0].inline_data.data):
                             inline_data = chunk.candidates[0].content.parts[0].inline_data
                             data_buffer = inline_data.data
                             batch_images.append(data_buffer)
-                        else:
-                            # Extract text from chunk
-                            if hasattr(chunk, 'text') and chunk.text:
-                                response_text += chunk.text
-                        
+                                                                        # Extract text from chunk
+                        if chunk.candidates[0].content.parts[0].text:
+                            response_text += chunk.candidates[0].content.parts[0].text
+
                         # Check for finish_reason
-                        if hasattr(chunk.candidates[0], 'finish_reason'):
+                        if hasattr(chunk.candidates[0], 'finish_reason') and chunk.candidates[0].finish_reason:
                             logger.info(f"chunk.finish_reason: {chunk.candidates[0].finish_reason}")
-                            response_text += f"{chunk.candidates[0].finish_reason}\n"
+                            response_text += f"\n finish_reason:{chunk.candidates[0].finish_reason}\n"
                     
                     if batch_images:
                         all_generated_images.extend(batch_images)
                         status_text += f"Batch {i+1}: Generated {len(batch_images)} images\n"
                     else:
-                        status_text += f"Batch {i+1}: No images found in response. Text response: {response_text}\n"
+                        status_text += f"Batch {i+1}: No images found in response. \nText response: {response_text}\n"
                 
                 except Exception as batch_error:
                     logger.exception(batch_error)
