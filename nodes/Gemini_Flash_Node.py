@@ -410,17 +410,17 @@ class Gemini_Flash_200_Exp:
                             except Exception as base64_error:
                                 logger.exception(base64_error)
                                 continue
-                        elif isinstance(img_binary, bytes):
-                            # 如果已经是 bytes，检查是否是 base64 编码的字符串
-                            try:
-                                # 尝试将 bytes 解码为字符串，然后检查是否是有效的 base64
-                                potential_b64_str = img_binary.decode('utf-8')
-                                # 简单检查是否看起来像 base64（长度是4的倍数，只包含base64字符）
-                                if len(potential_b64_str) % 4 == 0 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in potential_b64_str):
-                                    img_binary = base64.b64decode(potential_b64_str)
-                                    logger.info(f"Decoded base64 from bytes string")
-                            except UnicodeDecodeError as base64_error:
-                                logger.exception(base64_error)
+                        # elif isinstance(img_binary, bytes):
+                        #     # 如果已经是 bytes，检查是否是 base64 编码的字符串
+                        #     try:
+                        #         # 尝试将 bytes 解码为字符串，然后检查是否是有效的 base64
+                        #         potential_b64_str = img_binary.decode('utf-8')
+                        #         # 简单检查是否看起来像 base64（长度是4的倍数，只包含base64字符）
+                        #         if len(potential_b64_str) % 4 == 0 and all(c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' for c in potential_b64_str):
+                        #             img_binary = base64.b64decode(potential_b64_str)
+                        #             logger.info(f"Decoded base64 from bytes string")
+                        #     except UnicodeDecodeError as base64_error:
+                        #         logger.exception(base64_error)
                                                 
                         logger.debug(f"Final img_binary type: {type(img_binary)}, size: {len(img_binary) if isinstance(img_binary, bytes) else 'N/A'}")
                         
