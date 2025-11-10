@@ -306,14 +306,16 @@ class Gemini_Flash_200_Exp:
             
             client = genai.Client(api_key=self.api_key)
             
+            image_config = None
+            if aspect_ratio != "auto":
+                image_config=types.ImageConfig(aspect_ratio=aspect_ratio)
+
             # Set up generation config - add response_modalities for image generation model
             if is_image_generation_model:
                 generation_config = types.GenerateContentConfig(
                     temperature=temperature,
                     response_modalities=['Text', 'Image'],  
-                    image_config=types.ImageConfig(
-                        aspect_ratio=aspect_ratio
-                    )
+                    image_config=image_config
                 )
             else:
                 generation_config = types.GenerateContentConfig(

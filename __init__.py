@@ -59,28 +59,21 @@ def load_module(file_name):
         logger.exception(f"Error loading {file_name}: {str(e)}")
         return None
 
-# Load the modules
-gemini_module = load_module("Gemini_Flash_Node.py")
-audio_module = load_module("nodes_audio_recorder.py")
+# Load all modules from nodes directory
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
 
-# Combine mappings if modules loaded successfully
-if gemini_module and audio_module:
-    NODE_CLASS_MAPPINGS = {
-        **gemini_module.NODE_CLASS_MAPPINGS,
-        **audio_module.NODE_CLASS_MAPPINGS
-    }
-
-    NODE_DISPLAY_NAME_MAPPINGS = {
-        **gemini_module.NODE_DISPLAY_NAME_MAPPINGS,
-        **audio_module.NODE_DISPLAY_NAME_MAPPINGS
-    }
-elif gemini_module:
-    NODE_CLASS_MAPPINGS = gemini_module.NODE_CLASS_MAPPINGS
-    NODE_DISPLAY_NAME_MAPPINGS = gemini_module.NODE_DISPLAY_NAME_MAPPINGS
-else:
-    # Fallback for error cases
-    NODE_CLASS_MAPPINGS = {}
-    NODE_DISPLAY_NAME_MAPPINGS = {}
+if os.path.exists(nodes_path):
+    for file_name in os.listdir(nodes_path):
+        if file_name.endswith('.py') and not file_name.startswith('__'):
+            try:
+                module = load_module(file_name)
+                if module and hasattr(module, 'NODE_CLASS_MAPPINGS'):
+                    NODE_CLASS_MAPPINGS.update(module.NODE_CLASS_MAPPINGS)
+                if module and hasattr(module, 'NODE_DISPLAY_NAME_MAPPINGS'):
+                    NODE_DISPLAY_NAME_MAPPINGS.update(module.NODE_DISPLAY_NAME_MAPPINGS)
+            except Exception as e:
+                logger.exception(f"Failed to load node module {file_name}: {e}")
 
 # Define web directory
 WEB_DIRECTORY = os.path.join(current_path, "web")
