@@ -75,7 +75,7 @@ class Gemini_Flash_200_Exp:
             "required": {
                 "prompt": ("STRING", {"default": "Analyze the situation in details.", "multiline": True}),
                 "input_type": (["text", "image", "video", "audio"], {"default": "image"}),
-                "model_version": (["gemini-flash-lite-latest","gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-image", "gemini-2.5-flash-image-preview","gemini-2.0-flash"], {"default": "gemini-2.5-flash-image"}),
+                "model_version": (["gemini-flash-lite-latest","gemini-2.5-flash-lite", "gemini-flash-latest", "gemini-2.5-flash","gemini-3-pro-image-preview", "gemini-2.5-flash-image", "gemini-2.5-flash-image-preview","gemini-2.0-flash"], {"default": "gemini-2.5-flash-image"}),
                 "operation_mode": (["analysis", "generate_images"], {"default": "generate_images"}),
                 "chat_mode": ("BOOLEAN", {"default": False}),
                 "clear_history": ("BOOLEAN", {"default": False})
@@ -83,7 +83,7 @@ class Gemini_Flash_200_Exp:
             "optional": {
                 "Additional_Context": ("STRING", {"default": "", "multiline": True}),
                 "images": ("IMAGE", {"forceInput": False, "list": True}),  # Multiple images input
-                "second_images": ("IMAGE", {"forceInput": False, "list": True}),  # Second set of images for different resolutions
+                "second_images": ("IMAGE", {"forceInput": False, "list": True}),  # Second set of images for different image_sizes
                 "video": ("IMAGE", ),
                 "audio": ("AUDIO", ),
                 "api_key": ("STRING", {"default": ""}),
@@ -95,6 +95,7 @@ class Gemini_Flash_200_Exp:
                 "seed": ("INT", {"default": 0, "min": 0}),
                 "max_frames_of_video": ("INT", {"default": 6, "min": 1, "max": 16, "step": 1}),
                 "aspect_ratio": (["auto", "1:1", "3:2", "16:9", "5:4", "4:3", "9:16", "2:3", "4:5", "9:21", "21:9"], {"default": "auto"}),
+                "image_size": (["1K", "2K", "4K"], {"default": "1K"}),
                 "request_exception_handle": (["raise_exception", "output_exception"], {"default": "raise_exception"})
             }
         }
@@ -294,7 +295,7 @@ class Gemini_Flash_200_Exp:
         image_array = np.array(img).astype(np.float32) / 255.0
         return torch.from_numpy(image_array).unsqueeze(0)  # [1, H, W, 3]
 
-    def generate_images(self, prompt, model_version, images=None, second_images=None, batch_count=1, temperature=0.4, seed=0, max_images=6, aspect_ratio="auto"):
+    def generate_images(self, prompt, model_version, images=None, second_images=None, batch_count=1, temperature=0.4, seed=0, max_images=6, aspect_ratio="auto", image_size="1K"):
         """Generate images using Gemini models with image generation capabilities"""
         try:
             # Special handling for the image generation model
@@ -307,8 +308,13 @@ class Gemini_Flash_200_Exp:
             client = genai.Client(api_key=self.api_key)
             
             image_config = None
+            config_params = {}
             if aspect_ratio != "auto":
-                image_config=types.ImageConfig(aspect_ratio=aspect_ratio)
+                config_params["aspect_ratio"] = aspect_ratio
+            if image_size:
+                config_params["image_size"] = image_size
+            if config_params:
+                image_config = types.ImageConfig(**config_params)
 
             # Set up generation config - add response_modalities for image generation model
             if is_image_generation_model:
@@ -465,7 +471,7 @@ class Gemini_Flash_200_Exp:
                         Additional_Context=None, images=None, second_images=None, video=None, audio=None, 
                         api_key="", max_images=6, batch_count=1, seed=0,
                         max_output_tokens=8192, temperature=0.4, structured_output=False, max_frames_of_video=6,
-                        aspect_ratio="auto", request_exception_handle="raise_exception"):
+                        aspect_ratio="auto", image_size="1K", request_exception_handle="raise_exception"):
         """Generate content using Gemini model with various input types."""
         
         # Set all safety settings to block_none by default
@@ -500,7 +506,8 @@ class Gemini_Flash_200_Exp:
                 temperature=temperature,
                 seed=seed,
                 max_images=max_images,
-                aspect_ratio=aspect_ratio
+                aspect_ratio=aspect_ratio,
+                image_size=image_size
             )
 
         # For analysis mode (original functionality)
